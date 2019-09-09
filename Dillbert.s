@@ -109,7 +109,7 @@ rld:
 
 
 # takes 5 arguments x, y, x (ax) and y (ay) of the 2d array and bytes per pixel
-#this routine maps a 2d array on to 1, value is returned in %rax
+#this routine maps a 2d array on to a 1d array, value is returned in %rax
 loc:
 	push 	%rbp 			#store basepointer on the stack
 	movq	%rsp,%rbp		#stack pointer is the basepointer now
