@@ -1,4 +1,4 @@
-data
+.data
 format: .asciz "%[^\n]s"
 string: .asciz "%d\n"
 string2: .asciz "%d\n"
