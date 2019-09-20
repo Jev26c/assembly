@@ -1,8 +1,9 @@
-
 .data
 format: .asciz "%[^\n]s"
 string: .asciz "%s\n"
 string2: .asciz "%d\n"
+stringtest: .asciz "AAABBBCCCDDDD"
+
 .global main
 
 main:
@@ -15,8 +16,9 @@ main:
 	movq	$0,%rax				#set %rax to 0 for scanf
 	movq 	$format,%rdi 		#move format string in %rdi
 	movq 	-8(%rbp),%rsi 		#move the address of the local variable in %rsi
-	call 	scanf				#call scanf
-	movq 	-8(%rbp), %rdi 	
+	#call 	scanf				#call scanf
+	#movq 	-8(%rbp), %rdi 	
+	movq	$stringtest, %rdi
 	call 	rle
 	
 	movq 	%rax, %r15
@@ -55,7 +57,7 @@ rle:
 	movq	$0, %r14					#set counter to 0
 	encode:
 		cmpb 	$0, (%rdi)				#check for if the end of the string has been reached
-		je		rlend
+		je	rlend
 		incq 	%rdi
 
 		cmpb	(%rdi), %r12b
@@ -96,19 +98,36 @@ rld:
 		jmp count 
 
 	end:
-	#add compare here for if %r12 = 0
-	pushq	%rdi 						#store the encoded string
-	movq 	%r12, %rdi 					#move character in to %rdi
+	#compare %r12 = 0
+	#cmpq 	$0, %r12
+	#je rldend
+	pushq	%rdi 						#store the encoded string in the stack
+	movq 	%r12, %rdi 					#move length in to %rdi
 	movq 	  $1, %rsi 					#we want an array of bytes, so size = 1
 	call 	calloc						#allocate buffer
-	popq 	%rdi 						#pop string
-	movq	$0,	%r13 					#set offset to first character
-	movb	$0, %r12b 					#set counter to 0
+	popq 	%rdi 						#pop string of the stack
 
-	movb	(%rdi,%r13),%r12b 			#move number of characters in counter
-	incq	%r13
-	#loop:
+	pushq 	%rax						#store array on the stack
+	movb	(%rdi),%al					#move number in %al
+	cbtw
+	cwtl
+	cltq
+	movq	%rax, %r14					#store number in %14	
+	popq	%rax
+	incq	%rdi						#increment pointer
+	movq	$0, %r15					#set counter to 0			
+	#turn this in a proper loop
+	dloop:
+	cmpq %r14,%r15
+	je rldend
 
+	movb (%rdi), %r13b
+	movb %r13b, (%rax, %r15)
+	incq %r15
+
+	jmp dloop
+	dloopend:
+	rldend:
 	movq 	%rbp, %rsp 					#restore stackpointer
 	popq 	%rbp						#pop basepointer
 
