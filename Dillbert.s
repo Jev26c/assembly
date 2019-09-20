@@ -2,7 +2,7 @@
 .data
 format: .asciz "%[^\n]s"
 string: .asciz "%s\n"
-string2: .asciz "%d hello \n"
+string2: .asciz "%d\n"
 .global main
 
 main:
@@ -25,38 +25,36 @@ main:
 	movq 	$0, %rax
 	call 	printf
 	movq 	%r15, %rdi
-	#call rld
-	movq $1, %rdi
-	movq $1, %rsi
-	movq $1, %rdx
-	movq $32, %rcx
-	movq $3, %r8
-	call loc
+	call rld
+	movq	%rax, %rsi
+	movq 	$string, %rdi
+	movq 	$0, %rax
+	call 	printf
 	movq 	%rbp, %rsp 			#restore stackpointer
 	popq 	%rbp				#pop basepointer
 
 	ret
 
 rle: 	
-								#get string
-								#count letters and compress
-								#return string through %rax
-	push 	%rbp 				#store basepointer on the stack
-	movq	%rsp,%rbp			#stack pointer is the basepointer now
-	cmpb 	$0, (%rdi)			#if string is empty then jump to end of function
+										#get string
+										#count letters and compress
+										#return string through %rax
+	push 	%rbp 						#store basepointer on the stack
+	movq	%rsp,%rbp					#stack pointer is the basepointer now
+	cmpb 	$0, (%rdi)					#if string is empty then jump to end of function
 	je		rlend
 	push 	%rdi
-	movq 	$3072, %rdi 		#allocate 1024 bytes since the bmp will be 32x32*3
-	movq	$1, %rsi 			#size of a byte = 0;
+	movq 	$3072, %rdi 				#allocate 1024 bytes since the bmp will be 32x32*3
+	movq	$1, %rsi 					#size of a byte = 0;
 	call 	calloc
 	movq	$0, %r12
 	
 	popq 	%rdi
-	movb 	(%rdi),%r12b		#mov first character in to %r12
+	movb 	(%rdi),%r12b				#mov first character in to %r12
 	movb 	$1, %r13b
-	movq	$0, %r14			#set counter to 0
+	movq	$0, %r14					#set counter to 0
 	encode:
-		cmpb 	$0, (%rdi)		#check for if the end of the string has been reached
+		cmpb 	$0, (%rdi)				#check for if the end of the string has been reached
 		je		rlend
 		incq 	%rdi
 
@@ -65,45 +63,54 @@ rle:
 		incb	%r13b
 		jmp 	encode
 		diff:
-		movb 	%r13b, (%rax, %r14) 	# store count
-		incq 	%r14	
-		movb 	%r12b,(%rax, %r14)		#store character
-		incq 	%r14	
-		movb 	(%rdi),%r12b			
-		movb 	$1, %r13b				#reset counter
-		jmp 	encode
+			movb 	%r13b, (%rax, %r14) 	# store count
+			incq 	%r14	
+			movb 	%r12b,(%rax, %r14)		#store character
+			incq 	%r14	
+			movb 	(%rdi),%r12b			
+			movb 	$1, %r13b				#reset counter
+			jmp 	encode
 
 	rlend:
-	movb 	$0 ,(%rax, %r14)
-	movq 	%rbp, %rsp 		#restore stackpointer
-	popq 	%rbp			#pop basepointer
+	movq 	%rbp, %rsp 					#restore stackpointer
+	popq 	%rbp						#pop basepointer
 	ret
 
 #incomplete rld routine
 rld:
-	push 	%rbp 			#store basepointer on the stack
-	movq	%rsp,%rbp		#stack pointer is the basepointer now
+	push 	%rbp 						#store basepointer on the stack
+	movq	%rsp,%rbp					#stack pointer is the basepointer now
 
-	movq 	$0, %r12 		#set counter to 0
-	movq	$0, %r13        #set iterator to 0
+	movq 	$0, %r12 					#set counter to 0
+	movq	$0, %r13        			#set iterator to 0
 
 	count: 
-	cmpb 	$0,(%rdi)		#check if the end of the string has been reached	
-	je end
-	movb 	(%rdi,%r13),%al #store number
-	cbtw
-	cwtl
-	cltq
-	addq 	%rax, %r12 		#add to counter
-	addq	$2, %r13 		#add 2 to iterator
+		cmpb 	$0,(%rdi,%r13)				#check if the end of the string has been reached	
+		je end
+		movb 	(%rdi,%r13),%al 			#store number
+		cbtw
+		cwtl
+		cltq
+		addq 	%rax, %r12 					#add to counter
+		addq	$2, %r13 					#add 2 to iterator
+		jmp count 
 
-	movq	%rax, %rsi
-	movq	$string2, %rdi
-	movq	$0, %rax
-	call 	printf
+	end:
+	#add compare here for if %r12 = 0
+	pushq	%rdi 						#store the encoded string
+	movq 	%r12, %rdi 					#move character in to %rdi
+	movq 	  $1, %rsi 					#we want an array of bytes, so size = 1
+	call 	calloc						#allocate buffer
+	popq 	%rdi 						#pop string
+	movq	$0,	%r13 					#set offset to first character
+	movb	$0, %r12b 					#set counter to 0
 
-	movq 	%rbp, %rsp 		#restore stackpointer
-	popq 	%rbp			#pop basepointer
+	movb	(%rdi,%r13),%r12b 			#move number of characters in counter
+	incq	%r13
+	#loop:
+
+	movq 	%rbp, %rsp 					#restore stackpointer
+	popq 	%rbp						#pop basepointer
 
 	ret
 
@@ -128,6 +135,15 @@ loc:
 	popq %r12				#pop value from stack
 	addq %r12, %rax
 	locend:
+	movq 	%rbp, %rsp 		#restore stackpointer
+	popq 	%rbp			#pop basepointer
+	ret
+
+generatekey: #function to generate a the key/white noise
+	push 	%rbp 			#store basepointer on the stack
+	movq	%rsp,%rbp		#stack pointer is the basepointer now
+
+
 	movq 	%rbp, %rsp 		#restore stackpointer
 	popq 	%rbp			#pop basepointer
 	ret
