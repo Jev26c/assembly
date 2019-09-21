@@ -16,9 +16,9 @@ main:
 	movq	$0,%rax				#set %rax to 0 for scanf
 	movq 	$format,%rdi 		#move format string in %rdi
 	movq 	-8(%rbp),%rsi 		#move the address of the local variable in %rsi
-	#call 	scanf				#call scanf
-	#movq 	-8(%rbp), %rdi 	
-	movq	$stringtest, %rdi
+	call 	scanf				#call scanf
+	movq 	-8(%rbp), %rdi 	
+	#movq	$stringtest, %rdi
 	call 	rle
 	
 	movq 	%rax, %r15
@@ -37,10 +37,10 @@ main:
 
 	ret
 
+#get string
+#count letters and compress
+#return string through %rax
 rle: 	
-										#get string
-										#count letters and compress
-										#return string through %rax
 	push 	%rbp 						#store basepointer on the stack
 	movq	%rsp,%rbp					#stack pointer is the basepointer now
 	cmpb 	$0, (%rdi)					#if string is empty then jump to end of function
@@ -78,7 +78,8 @@ rle:
 	popq 	%rbp						#pop basepointer
 	ret
 
-#incomplete rld routine
+#decompresses run length encoded strings
+#only accepts null termniated strings in %rdi, returns the array in %rax
 rld:
 	push 	%rbp 						#store basepointer on the stack
 	movq	%rsp,%rbp					#stack pointer is the basepointer now
@@ -88,7 +89,7 @@ rld:
 
 	count: 
 		cmpb 	$0,(%rdi,%r13)				#check if the end of the string has been reached	
-		je end
+		je countend
 		movb 	(%rdi,%r13),%al 			#store number
 		cbtw
 		cwtl
@@ -97,16 +98,14 @@ rld:
 		addq	$2, %r13 					#add 2 to iterator
 		jmp count 
 
-	end:
-	#compare %r12 = 0
-	#cmpq 	$0, %r12
-	#je rldend
+	countend:
+	cmpq 	$0, %r12 					#compare %r12 = 0
+	je rldend
 	pushq	%rdi 						#store the encoded string in the stack
 	movq 	%r12, %rdi 					#move length in to %rdi
 	movq 	  $1, %rsi 					#we want an array of bytes, so size = 1
 	call 	calloc						#allocate buffer
 	popq 	%rdi 						#pop string of the stack
-
 	pushq 	%rax						#store array on the stack
 	movb	(%rdi),%al					#move number in %al
 	cbtw
@@ -116,17 +115,30 @@ rld:
 	popq	%rax
 	incq	%rdi						#increment pointer
 	movq	$0, %r15					#set counter to 0			
-	#turn this in a proper loop
+	movq 	$0, %rsi 					#set counter 0
 	dloop:
-	cmpq %r14,%r15
-	je rldend
+		cmpq %r14,%r15
+		je dloopend
+		movb (%rdi), %r13b
+		movb %r13b, (%rax, %rsi)
+		incq %r15
+		incq %rsi
+		jmp dloop
 
-	movb (%rdi), %r13b
-	movb %r13b, (%rax, %r15)
-	incq %r15
-
-	jmp dloop
-	dloopend:
+		dloopend:
+			incq 	%rdi
+			cmpb	$0, (%rdi)
+			je rldend  
+			pushq 	%rax						#store array on the stack
+			movb	(%rdi),%al					#move number in %al
+			cbtw
+			cwtl
+			cltq
+			movq	%rax, %r14					#store number in %14	
+			popq	%rax
+			incq	%rdi						#increment pointer
+			movq	$0, %r15					#set counter to 0
+			jmp dloop
 	rldend:
 	movq 	%rbp, %rsp 					#restore stackpointer
 	popq 	%rbp						#pop basepointer
@@ -158,7 +170,7 @@ loc:
 	popq 	%rbp			#pop basepointer
 	ret
 
-generatekey: #function to generate a the key/white noise
+generatekey: # function to generate a the key/white noise
 	push 	%rbp 			#store basepointer on the stack
 	movq	%rsp,%rbp		#stack pointer is the basepointer now
 
