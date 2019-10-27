@@ -1,225 +1,212 @@
 # gcc -o test -no-pie sha1.s ./sha1_test64.so
-# has to be in same folder with uni files
-.lcomm h0, 4
-.lcomm h1, 4
-.lcomm h2, 4
-.lcomm h3, 4
-.lcomm h4, 4
-.lcomm a, 4
-.lcomm b, 4
-.lcomm c, 4
-.lcomm d, 4
-.lcomm e, 4
+# has to be in same folder with sha1_test64.so file
 
-.lcomm m, 4
-.lcomm n, 4
+#For reference:
+#(%rdi) is h0, 4(%rdi) is h1 etc...'
+#w[i] is stored as (%rsi, %rdx, 4) or (%rsi, %rax, 4) where %rsi 
+
+.comm a, 4
+.comm b, 4
+.comm c, 4
+.comm d, 4
+.comm e, 4
+.comm f, 4
+.comm k, 4
+
 .global sha1_chunk
 
 sha1_chunk:
-    pushq %rbp					#push the base pointer
-	movq %rsp,%rbp				#copying the stackpointer to rbp
+    pushq %rbp					
+	movq %rsp,%rbp				
 
-    movq %rdi, %rbx             # put the address of h0 into RBX
+    movq $16, %rax              #counter to 16 for wordloop
 
-    movl (%rbx), %ecx           #copy h0 into ecx 
-    movl %ecx, h0               #and then into the memory variable h0
+wordloop:
 
-    movl 4(%rbx), %ecx          #copy h1 into ecx
-    movl %ecx, h1               #and then into the memory variable h1
+#Extend the 32-bit words
+#w[i] = (w[i-3] xor w[i-8] xor w[i-14] xor w[i-16]) leftrotate 1
 
-    movl 8(%rbx), %ecx          #copy h2 into ecx
-    movl %ecx, h2               #and then into the memory variable h2
+    cmp $80, %rax                     
+    jge Initialize                  
 
-    movl 12(%rbx), %ecx         #copy h3 into ecx
-    movl %ecx, h3               #and then into the memory variable h3
+    movq %rax, %rdx                # w[i-3] 
+    subq $3, %rdx                   
+    movl (%rsi, %rdx, 4), %r15d
 
-    movl 16(%rbx), %ecx         #copy h4 into ecx
-    movl %ecx, h4               #and then into the memory variable h4
+    movq %rax, %rdx                # w[i-8]
+    subq $8, %rdx                   
+    movl (%rsi, %rdx, 4), %r14d    
 
-    movq $16, %rax              #set counter to 16 for firstLoop
+    movq %rax, %rdx                # w[i-14]
+    subq $14, %rdx                   
+    movl (%rsi, %rdx, 4), %r13d
 
-#Extend the sixteen 32-bit words into eighty 32-bit words
-firstLoop:
-    cmp $80, %rax                   #if counter is >= 80       
-    jge next                        #jump to next
+    movq %rax, %rdx                # w[i-16]
+    subq $16, %rdx                   
+    movl (%rsi, %rdx, 4), %r12d
 
-    movq %rax, %rcx                 #copy rax to rcx
-    
-    subq $3, %rcx                   #take i-3 
-    movl (%rsi, %rcx, 4), %r14d      #copy w[i-3] into r8
-   
-    subq $5, %rcx                   #take i-8
-    movl (%rsi, %rcx, 4), %r13d      #copy w[i-8] into r9
+    xor %r15d, %r14d                  
+    xor %r14d, %r13d                 
+    xor %r13d, %r12d               
 
-    subq $6, %rcx                   #take i-14
-    movl (%rsi, %rcx, 4), %r12d     #copy w[i-14] into r10
+    roll $1, %r12d                  
 
-    subq $2, %rcx                   #take i-16
-    movl (%rsi, %rcx, 4), %r11d     #copy w[i-16] into r11
+    movl %r12d, (%rsi, %rax, 4)    
 
-    xor %r14d, %r13d                  #xor r8 with r9
-    xor %r13d, %r12d                 #xor result with r10
-    xor %r12d, %r11d                #xor result with r11
+    inc %rax                        
+    jmp wordloop                   
 
-    roll $1, %r11d                  #rotate r11 to the left by 1 bit
+Initialize:
 
-    movl %r11d, (%rsi, %rax, 4)     #copy the result to w[i]
+# Initialize general value for this chunk:
 
-    inc %rax                        #increment the counter
-    jmp firstLoop                   #Jump to firstLoop
-
-next:
-    movl h0, %ecx               #copy h0 to a
+    movl (%rdi), %ecx              #copy h0 to a
     movl %ecx, a
 
-    movl h1, %ecx               #copy h1 to b 
+    movl 4(%rdi), %ecx             #copy h1 to b 
     movl %ecx, b
 
-    movl h2, %ecx               #copy h2 to c
+    movl 8(%rdi), %ecx             #copy h2 to c
     movl %ecx, c
 
-    movl h3, %ecx               #copy h3 to d
+    movl 12(%rdi), %ecx            #copy h3 to d
     movl %ecx, d
 
-    movl h4, %ecx               #copy h4 to e
+    movl 16(%rdi), %ecx            #copy h4 to e
     movl %ecx, e
     
-    movq $0, %rax               #set counter to 0
-    jmp mainLoop                #jump mainLoop
+    movq $0, %rax                  #set counter to 0
 
+mainloop:
 
-continue:
-    movl a, %edx                #copy a into temp               
-    roll $5, %edx               #rotate temp to the left by 5
-    addl m, %edx                #add m to temp
-    addl e, %edx                #add e to temp
-    addl n, %edx                #add n to temp
+# main loop for hashing every 32 bit word, different method every 20 words stop when it reaches 80.
 
-    addl (%rsi, %rax, 4), %edx  #add w[i] to temp
+    cmp $80, %rax               
+    jge end                      
 
-    movl d, %ecx                #copy d to e
-    movl %ecx, e
+    cmp $19, %rax               
+    jle loopt20                 
 
-    movl c, %ecx                #copy c to d
-    movl %ecx, d
+    cmp $39, %rax               
+    jle loopt40                 
 
-    movl b, %r14d                #copy b to r8
-    roll $30, %r14d              #rotate to the left by 30
-    movl %r14d, c                #and then into c
+    cmp $59, %rax               
+    jle loopt60                 
 
-    movl a, %ecx                #copy a to b
-    movl %ecx, b
+    cmp $79, %rax               
+    jle loopt80    
 
-    movl %edx, a                #copy temp to a
+general:
+
+    movl a, %edx                #temp = (a leftrotate 5) + f + e + k + w[i]             
+    roll $5, %edx               
+    addl f, %edx                
+    addl e, %edx                
+    addl k, %edx                
+    addl (%rsi, %rax, 4), %edx  
+
+    movl d, %ecx                #e = d
+    movl %ecx, e                
+
+    movl c, %ecx                #d = c
+    movl %ecx, d                
+
+    movl b, %r15d               #c = b leftrotate 30
+    roll $30, %r15d              
+    movl %r15d, c               
+
+    movl a, %ecx                #b = a
+    movl %ecx, b                
+
+    movl %edx, a                #a = temp
     
-    inc %rax                    #increment counter
-    # go to for loop 1
+    inc %rax                    
 
-mainLoop:
+    jmp mainloop             
 
-    cmp $80, %rax               #if counter >= 80
-    jge end                     #jump end 
+loopt20:
 
-    cmp $19, %rax               #if counter <= 19
-    jle firstIF                 #jump to firstIF
+    #f = (b and c) or ((not b) and d)
 
-    cmp $39, %rax               #if counter <= 39
-    jle secondIF                #jump to secondIF
 
-    cmp $59, %rax               #if counter <= 59
-    jle thirdIF                 #jump to thirdIF
+    movl c, %r15d               
+    and b, %r15d                 
+    movl b, %r14d                
+    not %r14d                    
+    and d, %r14d                 
+    or %r15d, %r14d   
 
-    cmp $79, %rax               #if counter <= 79
-    jle forthIF                 #jump to forthIF
+    movl %r14d, f             
 
-firstIF:
-    movl c, %r14d                #copy c to r8
-    and b, %r14d                 #and b to r8
-
-    movl b, %r13d                #copy b to r9
-    not %r13d                    #flip r9
-    and d, %r13d                 #and d with r9
-
-    or %r14d, %r13d               #or r8 with r9
-
-    movl %r13d, m                #copy r9 to m
-
-    movl $1518500249, n         #copy 0x5A827999 into n
+    movl $0x5A827999, k         
     
-    jmp continue                #jump to continue
+    jmp general                
 
-secondIF:
-    movl b, %r14d                #copy b to r8
-    xor c, %r14d                 #xor c with r8
-    xor d, %r14d                 #xor d with r8
+loopt40:
 
-    movl %r14d, m                #copy result to m
+    #f = b xor c xor d 
 
-    movl $1859775393, n         #copy 0x6ED9EBA1 into n 
+    movl b, %r15d                
+    xor c, %r15d                 
+    xor d, %r15d                 
 
-    jmp continue                #jump to continue
+    movl %r15d, f               
 
-thirdIF:
-    movl c, %r14d                #copy c to r8
-    and b, %r14d                 #and b with r8
+    movl $0x6ED9EBA1, k         
 
-    movl d, %r13d                #copy d to r9
-    and b, %r13d                 #and b with r9
+    jmp general                
 
-    movl d, %r12d               #copy d to r10
-    and c, %r12d                #and c with r10
+loopt60:
+    
+    #(b and c) or (b and d) or (c and d)
 
-    or %r14d, %r13d               #or r8 with r9
-    or %r13d, %r12d              #or result with r10
+    movl c, %r15d                
+    and b, %r15d                 
+    movl d, %r14d                
+    and b, %r14d                 
+    movl d, %r13d               
+    and c, %r13d                
+    or %r15d, %r14d               
+    or %r14d, %r13d              
 
-    movl %r12d, m               #copy result to 
+    movl %r13d, f
 
-    movl $2400959708, n         #copy 0x8F1BBCDC into n
+    movl $0x8F1BBCDC, k         
 
-    jmp continue                #jump to continue
+    jmp general                
 
-forthIF:
-    movl b, %r14d                #copy b to r8
-    xor c, %r14d                 #xor c with r8
-    xor d, %r14d                 #xor d with r8
+loopt80:
 
-    movl %r14d, m                #copy result to m
+    #f = b xor c xor d
 
-    movl $3395469782, n         #copy 0xCA62C1D6 into n
+    movl b, %r15d                
+    xor c, %r15d                 
+    xor d, %r15d                 
 
-    jmp continue                #jump to continue
+    movl %r15d, f             
+
+    movl $0xCA62C1D6, k         
+
+    jmp general                
 
 end:
-    movl a, %ecx                #Copy a to %ecx for addition
-    addl %ecx, h0               #add a to h0    
+    movl a, %ecx                #add a to h0 
+    addl %ecx, (%rdi)              
 
-    movl b, %ecx                #Copy b to %ecx for addition
-    addl %ecx, h1               #add b to h1
+    movl b, %ecx                #add b to h1
+    addl %ecx, 4(%rdi)          
 
-    movl c, %ecx                #Copy c to %ecx for addition
-    addl %ecx, h2               #add c to h2
+    movl c, %ecx                #add c to h2
+    addl %ecx, 8(%rdi)          
 
-    movl d, %ecx                #Copy d to %ecx for addition
-    addl %ecx, h3               #add d to h3
+    movl d, %ecx                #add d to h3
+    addl %ecx, 12(%rdi)         
 
-    movl e, %ecx                #Copy e to %ecx for addition
-    addl %ecx, h4               #add e to h4
-    
-    movl h0, %ecx               #copy h0 back into normal address
-    movl %ecx, (%rbx)           #rbx the address of h0
-
-    movl h1, %ecx               #copy h1 back into normal address
-    movl %ecx, 4(%rbx)          #4(rbx) the address of h1
-
-    movl h2, %ecx               #copy h2 back into normal address
-    movl %ecx, 8(%rbx)          #8(rbx) the address of h2
-
-    movl h3, %ecx               #copy h3 back into normal address
-    movl %ecx, 12(%rbx)         #12(rbx) the address of h3
-
-    movl h4, %ecx               #copy h4 back into normal address
-    movl %ecx, 16(%rbx)         #16(rbx) the address of h4
+    movl e, %ecx                #add e to h4
+    addl %ecx, 16(%rdi)         
 
     movq %rbp, %rsp				#clear variables from stack
 	popq %rbp					#restore base pointer
+
     ret 
+
