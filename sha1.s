@@ -54,7 +54,7 @@ sha1_chunk:
         movl    12(%rdi),%r15d          # e = h3
         movl    %r15d,d
         movl    16(%rdi),%r15d          # e = h4
-        movl    %r15d,
+        movl    %r15d,e
         movq    $0,%rax                 # set counter to 0
     
     mainloop:                           # main loop for hashing every 32 bit word, different method every 20 words stop when it reaches 80.
