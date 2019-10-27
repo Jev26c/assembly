@@ -1,4 +1,4 @@
-
+# made by : sscherpenzeel (4935578) & jchamidullin (4719727)
 # gcc -o test -no-pie sha1.s ./sha1_test64.so
 # has to be in same folder with sha1_test64.so file
 
