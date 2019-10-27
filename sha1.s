@@ -88,7 +88,6 @@ sha1_chunk:
         movl    %r15d,a                 # a = temp
         inc     %rax                    # next word
         jmp     mainloop             
-
     loopt20:
         movl    c,%r15d                 # f = (b and c) or ((not b) and d)         
         and     b,%r15d                 
@@ -99,7 +98,6 @@ sha1_chunk:
         movl    %r14d,f             
         movl    $0x5A827999, k         
         jmp     general                
-
     loopt40:
         movl    b,%r15d                 # f = b xor c xor d           
         xor     c,%r15d                 
@@ -107,7 +105,6 @@ sha1_chunk:
         movl    %r15d,f               
         movl    $0x6ED9EBA1,k         
         jmp     general                
-
     loopt60:
         movl    c, %r15d                # f = (b and c) or (b and d) or (c and d)           
         and     b, %r15d                 
@@ -120,7 +117,6 @@ sha1_chunk:
         movl    %r13d, f
         movl    $0x8F1BBCDC, k         
         jmp     general                
-
     loopt80:
         movl    b, %r15d                # f = b xor c xor d             
         xor     c, %r15d                 
