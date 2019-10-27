@@ -157,7 +157,7 @@ loopt40:
 
 loopt60:
 
-    movl c, %r15d     # (b and c) or (b and d) or (c and d)           
+    movl c, %r15d     # f = (b and c) or (b and d) or (c and d)           
     and b, %r15d                 
     movl d, %r14d                
     and b, %r14d                 
