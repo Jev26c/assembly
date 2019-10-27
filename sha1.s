@@ -84,17 +84,17 @@ mainloop:
     # main loop for hashing every 32 bit word, different method every 20 words stop when it reaches 80.
 
     cmp $80, %rax               
-    jge end                      
-
+    jge end     
+    
     cmp $19, %rax               
-    jle loopt20                 
-
+    jle loopt20  
+    
     cmp $39, %rax               
-    jle loopt40                 
-
+    jle loopt40    
+    
     cmp $59, %rax               
-    jle loopt60                 
-
+    jle loopt60   
+    
     cmp $79, %rax               
     jle loopt80    
 
