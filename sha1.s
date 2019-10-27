@@ -18,7 +18,7 @@
 
 sha1_chunk:
     pushq %rbp					
-	movq %rsp,%rbp				
+    movq %rsp,%rbp				
 
     movq $16, %rax              #counter to 16 for wordloop
 
@@ -204,3 +204,4 @@ end:
     popq %rbp					#restore base pointer
 
     ret 
+
