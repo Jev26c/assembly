@@ -17,8 +17,9 @@
 .global sha1_chunk
 
 sha1_chunk:
+
     pushq %rbp					
-	movq %rsp,%rbp				
+    movq %rsp,%rbp				
 
     movq $16, %rax              # counter to 16 for wordloop
 
@@ -201,7 +202,7 @@ end:
     addl %r15d, 16(%rdi)         
 
     movq %rbp, %rsp				
-	popq %rbp					
+    popq %rbp					
 
     ret 
 
