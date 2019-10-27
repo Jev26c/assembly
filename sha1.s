@@ -2,9 +2,9 @@
 # gcc -o test -no-pie sha1.s ./sha1_test64.so
 # has to be in same folder with sha1_test64.so file
 
-#For reference:
-#(%rdi) is h0, 4(%rdi) is h1 etc...'
-#w[i] is stored as (%rsi, %r11, 4) or (%rsi, %rax, 4)
+# For reference:
+# (%rdi) is h0, 4(%rdi) is h1 etc...'
+# w[i] is stored as (%rsi, %r11, 4) or (%rsi, %rax, 4)
 
 .comm a, 4
 .comm b, 4
@@ -18,14 +18,14 @@
 
 sha1_chunk:
     pushq %rbp					
-    movq %rsp,%rbp				
+	movq %rsp,%rbp				
 
-    movq $16, %rax              #counter to 16 for wordloop
+    movq $16, %rax              # counter to 16 for wordloop
 
 wordloop:
 
-    #Extend the 32-bit words
-    #w[i] = (w[i-3] xor w[i-8] xor w[i-14] xor w[i-16]) leftrotate 1
+    # Extend the 32-bit words
+    # w[i] = (w[i-3] xor w[i-8] xor w[i-14] xor w[i-16]) leftrotate 1
 
     cmp $80, %rax                     
     jge Initialize                  
@@ -59,24 +59,24 @@ wordloop:
 
 Initialize:
 
-    # Initialize general value for this chunk:
+    # Initialize hash value for this chunk:
 
-    movl (%rdi), %r15d             #copy h0 to a
+    movl (%rdi), %r15d             # a = h0
     movl %r15d, a
 
-    movl 4(%rdi), %r15d            #copy h1 to b 
+    movl 4(%rdi), %r15d            # b = h1
     movl %r15d, b
 
-    movl 8(%rdi), %r15d            #copy h2 to c
+    movl 8(%rdi), %r15d            # c = h2
     movl %r15d, c
 
-    movl 12(%rdi), %r15d           #copy h3 to d
+    movl 12(%rdi), %r15d           # e = h3
     movl %r15d, d
 
-    movl 16(%rdi), %r15d           #copy h4 to e
+    movl 16(%rdi), %r15d           # e = h4
     movl %r15d, e
     
-    movq $0, %rax                  #set counter to 0
+    movq $0, %rax                  # set counter to 0
 
 mainloop:
 
@@ -99,7 +99,7 @@ mainloop:
 
 general:
 
-    # general hashing for all 32 bit words
+    # general hashing for all 32 bit words.
 
     movl a, %r15d               # temp = (a leftrotate 5) + f + e + k + w[i]             
     roll $5, %r15d              
@@ -191,17 +191,17 @@ end:
     movl b, %r15d                # h1 = h1 + b
     addl %r15d, 4(%rdi)          
 
-    movl c, %r15d               # h2 = h2 + c
+    movl c, %r15d                # h2 = h2 + c
     addl %r15d, 8(%rdi)          
 
-    movl d, %r15d               # h3 = h3 + d
+    movl d, %r15d                # h3 = h3 + d
     addl %r15d, 12(%rdi)         
 
     movl e, %r15d                # h4 = h4 + e
     addl %r15d, 16(%rdi)         
 
-    movq %rbp, %rsp				#clear variables from stack
-    popq %rbp					#restore base pointer
+    movq %rbp, %rsp				
+	popq %rbp					
 
     ret 
 
