@@ -95,7 +95,6 @@ general:
     jmp mainloop             
 
 loopt20:
-
     movl c, %r15d      # f = (b and c) or ((not b) and d)         
     and b, %r15d                 
     movl b, %r14d                
