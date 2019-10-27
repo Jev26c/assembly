@@ -1,4 +1,5 @@
 # made by : sscherpenzeel (4935578) & jchamidullin (4719727)
+# this is a direct copy from the pseudo code in wikipedia: https://en.wikipedia.org/wiki/SHA-1
 # gcc -o test -no-pie sha1.s ./sha1_test64.so
 # has to be in same folder with sha1_test64.so file
 
