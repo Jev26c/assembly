@@ -1,9 +1,10 @@
+
 # gcc -o test -no-pie sha1.s ./sha1_test64.so
 # has to be in same folder with sha1_test64.so file
 
 #For reference:
 #(%rdi) is h0, 4(%rdi) is h1 etc...'
-#w[i] is stored as (%rsi, %rdx, 4) or (%rsi, %rax, 4) where %rsi 
+#w[i] is stored as (%rsi, %r11, 4) or (%rsi, %rax, 4)
 
 .comm a, 4
 .comm b, 4
@@ -23,63 +24,63 @@ sha1_chunk:
 
 wordloop:
 
-#Extend the 32-bit words
-#w[i] = (w[i-3] xor w[i-8] xor w[i-14] xor w[i-16]) leftrotate 1
+    #Extend the 32-bit words
+    #w[i] = (w[i-3] xor w[i-8] xor w[i-14] xor w[i-16]) leftrotate 1
 
     cmp $80, %rax                     
     jge Initialize                  
 
-    movq %rax, %rdx                # w[i-3] 
-    subq $3, %rdx                   
-    movl (%rsi, %rdx, 4), %r15d
+    movq %rax, %r15                # w[i-3] 
+    subq $3, %r15                   
+    movl (%rsi, %r15, 4), %r14d
 
-    movq %rax, %rdx                # w[i-8]
-    subq $8, %rdx                   
-    movl (%rsi, %rdx, 4), %r14d    
+    movq %rax, %r15                # w[i-8]
+    subq $8, %r15                   
+    movl (%rsi, %r15, 4), %r13d    
 
-    movq %rax, %rdx                # w[i-14]
-    subq $14, %rdx                   
-    movl (%rsi, %rdx, 4), %r13d
+    movq %rax, %r15                # w[i-14]
+    subq $14, %r15                   
+    movl (%rsi, %r15, 4), %r12d
 
-    movq %rax, %rdx                # w[i-16]
-    subq $16, %rdx                   
-    movl (%rsi, %rdx, 4), %r12d
+    movq %rax, %r15                # w[i-16]
+    subq $16, %r15                   
+    movl (%rsi, %r15, 4), %r11d
 
-    xor %r15d, %r14d                  
-    xor %r14d, %r13d                 
-    xor %r13d, %r12d               
+    xor %r14d, %r13d                  
+    xor %r13d, %r12d                 
+    xor %r12d, %r11d               
 
-    roll $1, %r12d                  
+    roll $1, %r11d                  
 
-    movl %r12d, (%rsi, %rax, 4)    
+    movl %r11d, (%rsi, %rax, 4)    
 
     inc %rax                        
     jmp wordloop                   
 
 Initialize:
 
-# Initialize general value for this chunk:
+    # Initialize general value for this chunk:
 
-    movl (%rdi), %ecx              #copy h0 to a
-    movl %ecx, a
+    movl (%rdi), %r15d             #copy h0 to a
+    movl %r15d, a
 
-    movl 4(%rdi), %ecx             #copy h1 to b 
-    movl %ecx, b
+    movl 4(%rdi), %r15d            #copy h1 to b 
+    movl %r15d, b
 
-    movl 8(%rdi), %ecx             #copy h2 to c
-    movl %ecx, c
+    movl 8(%rdi), %r15d            #copy h2 to c
+    movl %r15d, c
 
-    movl 12(%rdi), %ecx            #copy h3 to d
-    movl %ecx, d
+    movl 12(%rdi), %r15d           #copy h3 to d
+    movl %r15d, d
 
-    movl 16(%rdi), %ecx            #copy h4 to e
-    movl %ecx, e
+    movl 16(%rdi), %r15d           #copy h4 to e
+    movl %r15d, e
     
     movq $0, %rax                  #set counter to 0
 
 mainloop:
 
-# main loop for hashing every 32 bit word, different method every 20 words stop when it reaches 80.
+    # main loop for hashing every 32 bit word, different method every 20 words stop when it reaches 80.
 
     cmp $80, %rax               
     jge end                      
@@ -98,38 +99,37 @@ mainloop:
 
 general:
 
-    movl a, %edx                #temp = (a leftrotate 5) + f + e + k + w[i]             
-    roll $5, %edx               
-    addl f, %edx                
-    addl e, %edx                
-    addl k, %edx                
-    addl (%rsi, %rax, 4), %edx  
+    # general hashing for all 32 bit words
 
-    movl d, %ecx                #e = d
-    movl %ecx, e                
+    movl a, %r15d               # temp = (a leftrotate 5) + f + e + k + w[i]             
+    roll $5, %r15d              
+    addl f, %r15d               
+    addl e, %r15d               
+    addl k, %r15d                
+    addl (%rsi, %rax, 4), %r15d 
 
-    movl c, %ecx                #d = c
-    movl %ecx, d                
+    movl d, %r14d               # e = d
+    movl %r14d, e                
 
-    movl b, %r15d               #c = b leftrotate 30
-    roll $30, %r15d              
-    movl %r15d, c               
+    movl c, %r14d               # d = c
+    movl %r14d, d                
 
-    movl a, %ecx                #b = a
-    movl %ecx, b                
+    movl b, %r13d               # c = b leftrotate 30
+    roll $30, %r13d              
+    movl %r13d, c               
 
-    movl %edx, a                #a = temp
+    movl a, %r14d               # b = a
+    movl %r14d, b                
+
+    movl %r15d, a               # a = temp
     
-    inc %rax                    
+    inc %rax                    # next word
 
     jmp mainloop             
 
 loopt20:
 
-    #f = (b and c) or ((not b) and d)
-
-
-    movl c, %r15d               
+    movl c, %r15d      # f = (b and c) or ((not b) and d)         
     and b, %r15d                 
     movl b, %r14d                
     not %r14d                    
@@ -144,9 +144,7 @@ loopt20:
 
 loopt40:
 
-    #f = b xor c xor d 
-
-    movl b, %r15d                
+    movl b, %r15d      # f = b xor c xor d           
     xor c, %r15d                 
     xor d, %r15d                 
 
@@ -157,10 +155,8 @@ loopt40:
     jmp general                
 
 loopt60:
-    
-    #(b and c) or (b and d) or (c and d)
 
-    movl c, %r15d                
+    movl c, %r15d     # (b and c) or (b and d) or (c and d)           
     and b, %r15d                 
     movl d, %r14d                
     and b, %r14d                 
@@ -177,9 +173,7 @@ loopt60:
 
 loopt80:
 
-    #f = b xor c xor d
-
-    movl b, %r15d                
+    movl b, %r15d     # f = b xor c xor d             
     xor c, %r15d                 
     xor d, %r15d                 
 
@@ -190,23 +184,23 @@ loopt80:
     jmp general                
 
 end:
-    movl a, %ecx                #add a to h0 
-    addl %ecx, (%rdi)              
 
-    movl b, %ecx                #add b to h1
-    addl %ecx, 4(%rdi)          
+    movl a, %r15d                # h0 = h0 + a
+    addl %r15d, (%rdi)              
 
-    movl c, %ecx                #add c to h2
-    addl %ecx, 8(%rdi)          
+    movl b, %r15d                # h1 = h1 + b
+    addl %r15d, 4(%rdi)          
 
-    movl d, %ecx                #add d to h3
-    addl %ecx, 12(%rdi)         
+    movl c, %r15d               # h2 = h2 + c
+    addl %r15d, 8(%rdi)          
 
-    movl e, %ecx                #add e to h4
-    addl %ecx, 16(%rdi)         
+    movl d, %r15d               # h3 = h3 + d
+    addl %r15d, 12(%rdi)         
+
+    movl e, %r15d                # h4 = h4 + e
+    addl %r15d, 16(%rdi)         
 
     movq %rbp, %rsp				#clear variables from stack
 	popq %rbp					#restore base pointer
 
     ret 
-
