@@ -31,29 +31,29 @@ wordloop:
     cmp $80, %rax                     
     jge Initialize                  
 
-    movq %rax, %r15                # w[i-3] 
-    subq $3, %r15                   
-    movl (%rsi, %r15, 4), %r14d
+    movq %rax, %r8                # w[i-3] 
+    subq $3, %r8                   
+    movl (%rsi, %r8, 4), %r15d
 
-    movq %rax, %r15                # w[i-8]
-    subq $8, %r15                   
-    movl (%rsi, %r15, 4), %r13d    
+    movq %rax, %r8                # w[i-8]
+    subq $8, %r8                   
+    movl (%rsi, %r8, 4), %r14d    
 
-    movq %rax, %r15                # w[i-14]
-    subq $14, %r15                   
-    movl (%rsi, %r15, 4), %r12d
+    movq %rax, %r8                # w[i-14]
+    subq $14, %r8                   
+    movl (%rsi, %r8, 4), %r13d
 
-    movq %rax, %r15                # w[i-16]
-    subq $16, %r15                   
-    movl (%rsi, %r15, 4), %r11d
+    movq %rax, %r8                # w[i-16]
+    subq $16, %r8                   
+    movl (%rsi, %r8, 4), %r12d
 
-    xor %r14d, %r13d                  
-    xor %r13d, %r12d                 
-    xor %r12d, %r11d               
+    xor %r15d, %r14d                  
+    xor %r14d, %r13d                 
+    xor %r13d, %r12d               
 
-    roll $1, %r11d                  
+    roll $1, %r12d                  
 
-    movl %r11d, (%rsi, %rax, 4)    
+    movl %r12d, (%rsi, %rax, 4)    
 
     inc %rax                        
     jmp wordloop                   
